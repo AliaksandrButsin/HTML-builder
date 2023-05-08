@@ -1,44 +1,64 @@
 const fs = require('fs');
 const path = require('path');
 
-function copyDir() {
+async function copyDir() {
   const sourceDir = path.join(__dirname,'files');
   const targetDir = path.join(__dirname, 'files-copy');
   console.log(sourceDir);
 
   // удаляем папку files-copy, если она уже существует
-  if (fs.existsSync(targetDir)) {
-    deleteFolderRecursive(targetDir);
+  try {
+    await deleteFolderRecursive(targetDir);
+  } catch (err) {
+    // ignore error if folder does not exist
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
   }
 
   // создаем папку files-copy
-  fs.mkdir(targetDir, { recursive: true }, (err) => {
-    if (err) throw err;
+  try {
+    await fs.promises.mkdir(targetDir, { recursive: true });
     console.log('Папка создана:', targetDir);
-  });
+  } catch (err) {
+    throw err;
+  }
 
   // копируем файлы
-  const files = fs.readdirSync(sourceDir);
-  files.forEach(file => {
-    const sourceFilePath = path.join(sourceDir, file);
-    const targetFilePath = path.join(targetDir, file);
-    fs.copyFileSync(sourceFilePath, targetFilePath);
-  });
-}
-
-function deleteFolderRecursive(path) {
-  if (fs.existsSync(path)) {
-    fs.readdirSync(path).forEach(file => {
-      const curPath = path + "/" + file;
-      if (fs.lstatSync(curPath).isDirectory()) { // recurse
-        deleteFolderRecursive(curPath);
-      } else { // delete file
-        fs.unlinkSync(curPath);
-      }
-    });
-    fs.rmdirSync(path);
+  try {
+    const files = await fs.promises.readdir(sourceDir);
+    for (const file of files) {
+      const sourceFilePath = path.join(sourceDir, file);
+      const targetFilePath = path.join(targetDir, file);
+      await fs.promises.copyFile(sourceFilePath, targetFilePath);
+    }
+  } catch (err) {
+    throw err;
   }
 }
 
+async function deleteFolderRecursive(path) {
+  if (await exists(path)) {
+    const files = await fs.promises.readdir(path);
+    for (const file of files) {
+      const curPath = path + "/" + file;
+      if ((await fs.promises.lstat(curPath)).isDirectory()) {
+        await deleteFolderRecursive(curPath);
+      } else {
+        await fs.promises.unlink(curPath);
+      }
+    }
+    await fs.promises.rmdir(path);
+  }
+}
 
-copyDir()
+async function exists(path) {
+  try {
+    await fs.promises.access(path);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+copyDir();
