@@ -2,21 +2,26 @@ const fs = require('fs');
 const path = require('path');
 const { promisify } = require('util');
 
+const exists = promisify(fs.exists);
+const mkdir = promisify(fs.mkdir);
+const readdir = promisify(fs.readdir);
+const stat = promisify(fs.stat);
+
 // Создаем директорию project-dist
 const projectDistPath = path.join(__dirname, 'project-dist');
-if (!fs.existsSync(projectDistPath)) {
-  fs.mkdirSync(projectDistPath);
-}
-
-// Собираем содержимое компонентов в index.html
-const templatePath = path.join(__dirname, 'template.html');
-const componentsPath = path.join(__dirname, 'components');
-const headerPath = path.join(componentsPath, 'header.html');
-const articlesPath = path.join(componentsPath, 'articles.html');
-const footerPath = path.join(componentsPath, 'footer.html');
-const indexPath = path.join(projectDistPath, 'index.html');
-
 (async () => {
+  if (!await exists(projectDistPath)) {
+    await mkdir(projectDistPath);
+  }
+
+  // Собираем содержимое компонентов в index.html
+  const templatePath = path.join(__dirname, 'template.html');
+  const componentsPath = path.join(__dirname, 'components');
+  const headerPath = path.join(componentsPath, 'header.html');
+  const articlesPath = path.join(componentsPath, 'articles.html');
+  const footerPath = path.join(componentsPath, 'footer.html');
+  const indexPath = path.join(projectDistPath, 'index.html');
+
   let indexHtml = await fs.promises.readFile(templatePath, 'utf8');
   indexHtml = indexHtml.replace('{{header}}', await fs.promises.readFile(headerPath, 'utf8'));
   indexHtml = indexHtml.replace('{{articles}}', await fs.promises.readFile(articlesPath, 'utf8'));
@@ -27,12 +32,12 @@ const indexPath = path.join(projectDistPath, 'index.html');
   const stylesPath = path.join(__dirname, 'styles');
   const styleFilePath = path.join(projectDistPath, 'style.css');
 
-  const files = fs.readdirSync(stylesPath);
+  const files = await readdir(stylesPath);
   let styles = '';
   for (let file of files) {
     const filePath = path.join(stylesPath, file);
-    const stat = fs.statSync(filePath);
-    if (stat.isFile()) {
+    const fileStat = await stat(filePath);
+    if (fileStat.isFile()) {
       styles += await fs.promises.readFile(filePath, 'utf8');
     }
   }
@@ -43,7 +48,6 @@ const indexPath = path.join(projectDistPath, 'index.html');
   const assetsDistPath = path.join(projectDistPath, 'assets');
 
   const copyFile = promisify(fs.copyFile);
-  const mkdir = promisify(fs.mkdir);
   const copyDir = async (src, dest) => {
     await mkdir(dest, { recursive: true });
     const entries = await fs.promises.readdir(src, { withFileTypes: true });
@@ -59,5 +63,5 @@ const indexPath = path.join(projectDistPath, 'index.html');
   };
 
   await copyDir(assetsPath, assetsDistPath);
-  console.log('Все задачи выполненны успешно!');
+  console.log('Все задачи выполнены успешно!');
 })();
