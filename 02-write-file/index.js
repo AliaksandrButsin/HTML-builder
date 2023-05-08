@@ -1,9 +1,6 @@
-
-
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-
 
 const filePath = path.join(__dirname, 'text.txt');
 
@@ -16,32 +13,44 @@ const rl = readline.createInterface({
 });
 
 // Проверяем, существует ли файл. Если нет, то создаем его.
-if (!fs.existsSync(filePath)) {
-  fs.writeFileSync(filePath, '');
-}
+(async function() {
+  try {
+    await fs.promises.access(filePath, fs.constants.F_OK);
+  } catch {
+    await fs.promises.writeFile(filePath, '');
+  }
+})();
 
 // Функция для записи текста в файл
-function writeToFile(text) {
-  fs.appendFileSync(filePath, `${text}\n`);
+async function writeToFile(text) {
+  await fs.promises.appendFile(filePath, `${text}\n`);
 }
 
 // Запрашиваем у пользователя ввод и записываем его в файл
-function askUser() {
-  rl.question('("exit" завершить и сохранить.) Введите следующую строку: ', (answer) => {
+async function askUser() {
+  rl.question('("exit" завершить и сохранить.) Введите следующую строку: ', async (answer) => {
     if (answer === 'exit') {
       console.log('\nВаши данные сохранены. \nДо свидания!');
       rl.close();
     } else {
-      writeToFile(answer);
-      askUser();
+      await writeToFile(answer);
+      await askUser();
     }
   });
 }
-// Запрашиваем у пользователя ввод и записываем его в файл
-rl.on('SIGINT', () => {
+
+// Обработка сигнала SIGINT
+rl.on('SIGINT', async () => {
   console.log('\n\nВаши данные сохранены. \nДо свидания!');
   rl.close();
 });
 
 // Запускаем приложение
-askUser();
+(async function() {
+  try {
+    await askUser();
+  } catch (error) {
+    console.error(error);
+    rl.close();
+  }
+})();
