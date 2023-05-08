@@ -18,14 +18,17 @@ const projectDistPath = path.join(__dirname, 'project-dist');
   const templatePath = path.join(__dirname, 'template.html');
   const componentsPath = path.join(__dirname, 'components');
   const headerPath = path.join(componentsPath, 'header.html');
+  const aboutPath = path.join(componentsPath, 'about.html');
   const articlesPath = path.join(componentsPath, 'articles.html');
   const footerPath = path.join(componentsPath, 'footer.html');
   const indexPath = path.join(projectDistPath, 'index.html');
 
   let indexHtml = await fs.promises.readFile(templatePath, 'utf8');
   indexHtml = indexHtml.replace('{{header}}', await fs.promises.readFile(headerPath, 'utf8'));
+  indexHtml = indexHtml.replace('{{about}}', await fs.promises.readFile(aboutPath, 'utf8'));
   indexHtml = indexHtml.replace('{{articles}}', await fs.promises.readFile(articlesPath, 'utf8'));
   indexHtml = indexHtml.replace('{{footer}}', await fs.promises.readFile(footerPath, 'utf8'));
+ 
   await fs.promises.writeFile(indexPath, indexHtml);
 
   // Собираем стили в style.css
