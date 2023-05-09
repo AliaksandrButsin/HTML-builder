@@ -14,8 +14,20 @@ const projectDistPath = path.join(__dirname, 'project-dist');
     await mkdir(projectDistPath);
   }
 
-  // Собираем содержимое компонентов в index.html
-  const templatePath = path.join(__dirname, 'template.html');
+ // Собираем содержимое компонентов в index.html
+const tagsInHtml = ['{{header}}', '{{about}}', '{{articles}}', '{{footer}}'];
+const templatePath = path.join(__dirname, 'template.html');
+const templateContent = await fs.promises.readFile(templatePath, 'utf8');
+
+// Поиск всех совпадений шаблонных тегов в строке
+const foundTags = templateContent.match(/\{\{[a-z]+\}\}/gi) || [];
+
+// Проверка, что количество найденных тегов равно ожидаемому количеству
+if (foundTags.length !== tagsInHtml.length) {
+  // Вывод сообщения об отсутствии тегов
+  const missingTags = tagsInHtml.filter(tag => !foundTags.includes(tag));
+  missingTags.forEach(tag => console.log(`Нет тега ${tag}`));
+
   const componentsPath = path.join(__dirname, 'components');
   const headerPath = path.join(componentsPath, 'header.html');
   const aboutPath = path.join(componentsPath, 'about.html');
@@ -25,11 +37,26 @@ const projectDistPath = path.join(__dirname, 'project-dist');
 
   let indexHtml = await fs.promises.readFile(templatePath, 'utf8');
   indexHtml = indexHtml.replace('{{header}}', await fs.promises.readFile(headerPath, 'utf8'));
-  indexHtml = indexHtml.replace('{{about}}', await fs.promises.readFile(aboutPath, 'utf8'));
+  indexHtml = indexHtml.replace('{{about}}', templateContent.includes('{{about}}') ? await fs.promises.readFile(aboutPath, 'utf8') : '');
   indexHtml = indexHtml.replace('{{articles}}', await fs.promises.readFile(articlesPath, 'utf8'));
-  indexHtml = indexHtml.replace('{{footer}}', await fs.promises.readFile(footerPath, 'utf8'));
- 
+  indexHtml = indexHtml.replace('{{footer}}', await fs.promises.readFile(footerPath, 'utf8')); 
   await fs.promises.writeFile(indexPath, indexHtml);
+
+} else { 
+  const componentsPath = path.join(__dirname, 'components');
+  const headerPath = path.join(componentsPath, 'header.html');
+  const aboutPath = path.join(componentsPath, 'about.html');
+  const articlesPath = path.join(componentsPath, 'articles.html');
+  const footerPath = path.join(componentsPath, 'footer.html');
+  const indexPath = path.join(projectDistPath, 'index.html');
+
+  let indexHtml = await fs.promises.readFile(templatePath, 'utf8');
+  indexHtml = indexHtml.replace('{{header}}', await fs.promises.readFile(headerPath, 'utf8'));
+  indexHtml = indexHtml.replace('{{about}}', templateContent.includes('{{about}}') ? await fs.promises.readFile(aboutPath, 'utf8') : '');
+  indexHtml = indexHtml.replace('{{articles}}', await fs.promises.readFile(articlesPath, 'utf8'));
+  indexHtml = indexHtml.replace('{{footer}}', await fs.promises.readFile(footerPath, 'utf8')); 
+  await fs.promises.writeFile(indexPath, indexHtml);
+};
 
   // Собираем стили в style.css
   const stylesPath = path.join(__dirname, 'styles');
@@ -68,3 +95,4 @@ const projectDistPath = path.join(__dirname, 'project-dist');
   await copyDir(assetsPath, assetsDistPath);
   console.log('Все задачи выполнены успешно!');
 })();
+

@@ -1,21 +1,46 @@
-const fs = require('fs').promises;
+const fs = require('fs');
 const path = require('path');
 
 const stylesDir = path.join(__dirname, 'styles');
 const distDir = path.join(__dirname, 'project-dist');
 
-// Собираем имена всех файлов в директории styles, оканчивающихся на .css
-fs.readdir(stylesDir)
-  .then(files => files.filter(file => path.extname(file) === '.css'))
-  .then(cssFiles => {
-    // Считываем содержимое каждого файла и записываем в выходной файл
-    const outputFilePath = path.join(distDir, 'bundle.css');
-    cssFiles.reduce((promise, file) => {
-      return promise.then(() => {
-        return fs.readFile(path.join(stylesDir, file), 'utf8')
-          .then(css => fs.appendFile(outputFilePath, css));
+fs.readdir(stylesDir, (err, files) => {
+  if (err) {
+    console.error(err);
+    return;
+  }
+
+  const cssFiles = files.filter(file => path.extname(file) === '.css');
+  const outputFilePath = path.join(distDir, 'bundle.css');
+
+  let i = 0;
+  const writeNextFile = () => {
+    if (i < cssFiles.length) {
+      const file = cssFiles[i++];
+      const sourceFilePath = path.join(stylesDir, file);
+      fs.readFile(sourceFilePath, 'utf8', (err, css) => {
+        if (err) {
+          console.error(err);
+          return;
+        }
+        fs.appendFile(outputFilePath, css, err => {
+          if (err) {
+            console.error(err);
+            return;
+          }
+          writeNextFile();
+        });
       });
-    }, Promise.resolve())
-    .then(() => console.log(`Собрано ${cssFiles.length} CSS файлов в ${outputFilePath}`));
-  })
-  .catch(err => console.error(err));
+    } else {
+      console.log(`Собрано ${cssFiles.length} CSS файлов в ${outputFilePath}`);
+    }
+  };
+
+  fs.unlink(outputFilePath, err => {
+    if (err && err.code !== 'ENOENT') {
+      console.error(err);
+      return;
+    }
+    writeNextFile();
+  });
+});
