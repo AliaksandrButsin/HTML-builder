@@ -13,44 +13,51 @@ const rl = readline.createInterface({
 });
 
 // Проверяем, существует ли файл. Если нет, то создаем его.
-(async function() {
-  try {
-    await fs.promises.access(filePath, fs.constants.F_OK);
-  } catch {
-    await fs.promises.writeFile(filePath, '');
+fs.access(filePath, fs.constants.F_OK, (err) => {
+  if (err) {
+    fs.writeFile(filePath, '', (err) => {
+      if (err) {
+        console.error(err);
+        rl.close();
+      }
+    });
   }
-})();
+});
 
 // Функция для записи текста в файл
-async function writeToFile(text) {
-  await fs.promises.appendFile(filePath, `${text}\n`);
+function writeToFile(text, callback) {
+  fs.appendFile(filePath, `${text}\n`, callback);
 }
 
 // Запрашиваем у пользователя ввод и записываем его в файл
-async function askUser() {
-  rl.question('("exit" завершить и сохранить.) Введите следующую строку: ', async (answer) => {
-    if (answer === 'exit') {
+function askUser() {
+  rl.question('("exit" завершить и сохранить.) Введите следующую строку: ', (answer) => {
+    if ( answer.toString().toLowerCase().trim() === 'exit') {
       console.log('\nВаши данные сохранены. \nДо свидания!');
       rl.close();
     } else {
-      await writeToFile(answer);
-      await askUser();
+      writeToFile(answer, (err) => {
+        if (err) {
+          console.error(err);
+          rl.close();
+        } else {
+          askUser();
+        }
+      });
     }
   });
 }
 
 // Обработка сигнала SIGINT
-rl.on('SIGINT', async () => {
+rl.on('SIGINT', () => {
   console.log('\n\nВаши данные сохранены. \nДо свидания!');
   rl.close();
 });
 
 // Запускаем приложение
-(async function() {
-  try {
-    await askUser();
-  } catch (error) {
-    console.error(error);
-    rl.close();
-  }
-})();
+try {
+  askUser();
+} catch (error) {
+  console.error(error);
+  rl.close();
+}
